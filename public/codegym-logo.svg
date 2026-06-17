@@ -1,0 +1,7 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">CodeGym logo</title>
+  <desc id="desc">CodeGym monogram on a blue square with an orange diagonal stripe.</desc>
+  <rect width="512" height="512" fill="#1F2E73"/>
+  <path d="M330 62H206C116 62 72 113 72 204V316C72 407 118 456 206 456H304C393 456 442 407 442 318V230H266V328H342V335C342 358 331 369 306 369H212C187 369 174 356 174 330V192C174 165 187 149 214 149H330C340 149 346 143 346 133V78C346 68 340 62 330 62Z" fill="white"/>
+  <path d="M512 223L0 382V303L512 144V223Z" fill="#FF6B35"/>
+</svg>
