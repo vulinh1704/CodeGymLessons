@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { CourseModule, KeywordCard, Lesson, LessonSlide, SlideTone } from "@/data/curriculum";
 
 type LessonShellProps = {
   module: CourseModule;
   lesson: Lesson;
+  initialSlideIndex?: number;
 };
 
 const toneLabels: Record<SlideTone, string> = {
@@ -22,10 +25,16 @@ const fallbackToneIcons: Record<SlideTone, string> = {
   summary: "fa-flag-checkered",
 };
 
-export function LessonShell({ module, lesson }: LessonShellProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
+export function LessonShell({ module, lesson, initialSlideIndex = 0 }: LessonShellProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [activeIndex, setActiveIndex] = useState(() =>
+    clampSlideIndex(initialSlideIndex, lesson.slides.length),
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<KeywordCard | null>(null);
+  const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
 
   const activeSlide = lesson.slides[activeIndex];
   const progress = useMemo(
@@ -57,10 +66,50 @@ export function LessonShell({ module, lesson }: LessonShellProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [lesson.slides.length, selectedCard]);
 
+  useEffect(() => {
+    setCopiedPrompt(null);
+  }, [activeSlide.id]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (activeIndex === 0) {
+      params.delete("slide");
+    } else {
+      params.set("slide", String(activeIndex + 1));
+    }
+
+    const query = params.toString();
+    const currentQuery = searchParams.toString();
+    if (query === currentQuery) return;
+
+    const nextUrl = query ? `${pathname}?${query}` : pathname;
+    router.replace(nextUrl, { scroll: false });
+  }, [activeIndex, pathname, router, searchParams]);
+
   const goBack = () => setActiveIndex((current) => Math.max(current - 1, 0));
   const goNext = () => setActiveIndex((current) => Math.min(current + 1, lesson.slides.length - 1));
   const closeSidebar = () => setSidebarOpen(false);
   const activeDisplayNumber = getSlideNumber(activeSlide, activeIndex);
+  const handleCopyPrompt = async (prompt: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(prompt);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = prompt;
+        textarea.setAttribute("readonly", "true");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopiedPrompt(prompt);
+    } catch {
+      setCopiedPrompt(null);
+    }
+  };
 
   return (
     <main className="lesson-app">
@@ -79,6 +128,11 @@ export function LessonShell({ module, lesson }: LessonShellProps) {
             <i className="fa-solid fa-xmark" aria-hidden="true" />
           </button>
         </div>
+
+        <Link href="/" className="back-home-link">
+          <i className="fa-solid fa-arrow-left" aria-hidden="true" />
+          Trang chủ
+        </Link>
 
         <section className="module-panel">
           <p>{module.title}</p>
@@ -138,6 +192,8 @@ export function LessonShell({ module, lesson }: LessonShellProps) {
           slide={activeSlide}
           index={activeIndex}
           onCardSelect={setSelectedCard}
+          onCopyPrompt={handleCopyPrompt}
+          copiedPrompt={copiedPrompt}
         />
 
         <footer className="controls" aria-label="Điều hướng slide">
@@ -180,10 +236,14 @@ function SlideView({
   slide,
   index,
   onCardSelect,
+  onCopyPrompt,
+  copiedPrompt,
 }: {
   slide: LessonSlide;
   index: number;
   onCardSelect: (card: KeywordCard) => void;
+  onCopyPrompt: (prompt: string) => void;
+  copiedPrompt: string | null;
 }) {
   return (
     <article className={`slide-card tone-${slide.tone}`}>
@@ -208,6 +268,30 @@ function SlideView({
               <span>{slide.callout.label}</span>
               <strong>{slide.callout.text}</strong>
             </aside>
+          ) : null}
+
+          {slide.copyPrompts ? (
+            <div className="prompt-grid" aria-label="Prompt mẫu có thể sao chép">
+              {slide.copyPrompts.map((item) => {
+                const isCopied = copiedPrompt === item.prompt;
+                return (
+                  <section className="prompt-card" key={`${slide.id}-${item.label}`}>
+                    <div className="prompt-card-head">
+                      <strong>{item.label}</strong>
+                      <button
+                        className={`prompt-copy-button${isCopied ? " copied" : ""}`}
+                        onClick={() => onCopyPrompt(item.prompt)}
+                        type="button"
+                      >
+                        <i className={`fa-solid ${isCopied ? "fa-check" : "fa-copy"}`} aria-hidden="true" />
+                        {isCopied ? "Đã sao chép" : "Sao chép"}
+                      </button>
+                    </div>
+                    <p>{item.prompt}</p>
+                  </section>
+                );
+              })}
+            </div>
           ) : null}
 
           {slide.checklist ? (
@@ -241,7 +325,7 @@ function SlideView({
                   {card.detail ? (
                     <span className="keyword-card-more">
                       <i className="fa-solid fa-circle-info" aria-hidden="true" />
-                      Xem ví dụ
+                      Xem chi tiết
                     </span>
                   ) : null}
                 </button>
@@ -279,8 +363,35 @@ function KeywordModal({ card, onClose }: { card: KeywordCard; onClose: () => voi
 
         <div className="kw-modal-body">
           <h3>{card.title}</h3>
+          <p className="kw-modal-lead">
+            Dựa vào bài học hôm nay, đây là các bước từ cài môi trường đến dùng AI để hoàn thành phần thực hành đơn.
+          </p>
 
-          {card.detail ? <p className="kw-modal-detail">{card.detail}</p> : null}
+          {card.detailSteps ? (
+            <div className="kw-step-list">
+              {card.detailSteps.map((step) => (
+                <section className="kw-step-card" key={step.step}>
+                  <strong>{step.step}</strong>
+                  {step.formula ? <span className="kw-step-formula">Công thức: {step.formula}</span> : null}
+                  <p>{step.guidance}</p>
+                  <div className="kw-step-prompt">
+                    <span>Prompt mẫu</span>
+                    <p>{step.prompt}</p>
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : card.detail ? (
+            <ol className="kw-modal-detail">
+              {card.detail
+                .split("\n")
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => (
+                  <li key={line}>{line.replace(/^\d+\.\s*/, "")}</li>
+                ))}
+            </ol>
+          ) : null}
 
           {card.example ? (
             <div className="kw-modal-example">
@@ -299,4 +410,9 @@ function KeywordModal({ card, onClose }: { card: KeywordCard; onClose: () => voi
 
 function getSlideNumber(slide: LessonSlide, index: number) {
   return slide.displayNumber ?? String(index + 1).padStart(2, "0");
+}
+
+function clampSlideIndex(index: number, slideCount: number) {
+  if (!Number.isFinite(index)) return 0;
+  return Math.min(Math.max(Math.trunc(index), 0), Math.max(slideCount - 1, 0));
 }
