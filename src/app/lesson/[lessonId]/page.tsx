@@ -2,14 +2,19 @@ import { notFound } from "next/navigation";
 import { findLesson } from "@/data/curriculum";
 import { LessonShell } from "@/components/LessonShell";
 
+type LessonPageProps = {
+  params: Promise<{ lessonId: string }>;
+  searchParams?: Promise<{ slide?: string }>;
+};
+
 export default async function LessonPage({
   params,
   searchParams,
-}: {
-  params: Promise<{ lessonId: string }>;
-  searchParams?: Promise<{ slide?: string }>;
-}) {
-  const [{ lessonId }, query] = await Promise.all([params, searchParams ?? Promise.resolve({})]);
+}: LessonPageProps) {
+  const [{ lessonId }, query] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve<{ slide?: string }>({}),
+  ]);
   const result = findLesson(lessonId);
   if (!result) notFound();
   const requestedSlide = Number(query.slide);
