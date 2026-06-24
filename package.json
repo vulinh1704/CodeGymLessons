@@ -10,12 +10,13 @@
   },
   "dependencies": {
     "@types/node": "latest",
+    "@types/prismjs": "^1.26.6",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "next": "latest",
+    "prismjs": "^1.30.0",
     "react": "latest",
     "react-dom": "latest",
     "typescript": "latest"
-  },
-  "devDependencies": {}
+  }
 }

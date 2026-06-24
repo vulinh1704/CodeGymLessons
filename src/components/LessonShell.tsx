@@ -1,9 +1,12 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { CourseModule, KeywordCard, Lesson, LessonSlide, SlideTone } from "@/data/curriculum";
+import Prism from "prismjs";
+import "prismjs/components/prism-markup";
+import type { CodeAnnotation, CourseModule, HtmlDemo, KeywordCard, Lesson, LessonSlide, SlideTone } from "@/data/curriculum";
 
 type LessonShellProps = {
   module: CourseModule;
@@ -255,7 +258,12 @@ function SlideView({
             <span>{slide.eyebrow ?? toneLabels[slide.tone]}</span>
           </div>
 
-          <h2>{slide.title}</h2>
+          <h2>
+            {slide.titleImage && (
+              <img className="title-image" src={slide.titleImage} alt="" aria-hidden="true" />
+            )}
+            {slide.title}
+          </h2>
 
           <div className="body-copy">
             {slide.body.map((paragraph) => (
@@ -268,6 +276,38 @@ function SlideView({
               <span>{slide.callout.label}</span>
               <strong>{slide.callout.text}</strong>
             </aside>
+          ) : null}
+
+          {slide.link ? (
+            <a
+              className="slide-link-btn"
+              href={slide.link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true" />
+              {slide.link.label}
+            </a>
+          ) : null}
+
+          {slide.annotatedCode ? (
+            <AnnotatedCodeBlockView
+              code={slide.annotatedCode.code}
+              language={slide.annotatedCode.language}
+              annotations={slide.annotatedCode.annotations}
+            />
+          ) : null}
+
+          {slide.codeBlock ? (
+            <CodeBlockView code={slide.codeBlock.code} language={slide.codeBlock.language} />
+          ) : null}
+
+          {slide.htmlDemos ? (
+            <div className="html-demos">
+              {slide.htmlDemos.map((demo) => (
+                <SingleHtmlDemo key={demo.label} demo={demo} />
+              ))}
+            </div>
           ) : null}
 
           {slide.copyPrompts ? (
@@ -296,40 +336,63 @@ function SlideView({
 
           {slide.checklist ? (
             <ul className="checklist">
-              {slide.checklist.map((item) => (
-                <li key={item}>
-                  <span aria-hidden="true" />
-                  {item}
-                </li>
-              ))}
+              {slide.checklist.map((item) => {
+                const colonIdx = item.indexOf(":");
+                const before = colonIdx !== -1 ? item.slice(0, colonIdx) : null;
+                const isShortcut = before !== null && before.includes("+");
+                return (
+                  <li key={item}>
+                    <span aria-hidden="true" />
+                    {isShortcut
+                      ? <span><strong>{before}</strong>{item.slice(colonIdx)}</span>
+                      : item}
+                  </li>
+                );
+              })}
             </ul>
+          ) : null}
+
+          {slide.timeline ? (
+            <TimelineView items={slide.timeline} onCardSelect={onCardSelect} />
           ) : null}
 
           {slide.keywordCards ? (
             <div className="keyword-grid">
-              {slide.keywordCards.map((card, cardIndex) => (
-                <button
-                  className="keyword-card"
-                  key={card.term}
-                  onClick={() => onCardSelect(card)}
-                  type="button"
-                  aria-label={`Xem chi tiết: ${card.term} – ${card.title}`}
-                >
-                  <div className="keyword-card-top">
-                    <span>{String(cardIndex + 1).padStart(2, "0")}</span>
-                    <i className={`fa-solid ${card.icon}`} aria-hidden="true" />
+              {slide.keywordCards.map((card, cardIndex) => {
+                const isClickable = !!(card.detail || card.detailSteps);
+                const inner = (
+                  <>
+                    <div className="keyword-card-top">
+                      <span>{String(cardIndex + 1).padStart(2, "0")}</span>
+                      <i className={`fa-solid ${card.icon}`} aria-hidden="true" />
+                    </div>
+                    <strong>{card.term}</strong>
+                    <h3>{card.title}</h3>
+                    <p>{card.description}</p>
+                    {isClickable ? (
+                      <span className="keyword-card-more">
+                        <i className="fa-solid fa-circle-info" aria-hidden="true" />
+                        Xem chi tiết
+                      </span>
+                    ) : null}
+                  </>
+                );
+                return isClickable ? (
+                  <button
+                    className="keyword-card"
+                    key={card.term}
+                    onClick={() => onCardSelect(card)}
+                    type="button"
+                    aria-label={`Xem chi tiết: ${card.term} – ${card.title}`}
+                  >
+                    {inner}
+                  </button>
+                ) : (
+                  <div className="keyword-card keyword-card--static" key={card.term}>
+                    {inner}
                   </div>
-                  <strong>{card.term}</strong>
-                  <h3>{card.title}</h3>
-                  <p>{card.description}</p>
-                  {card.detail ? (
-                    <span className="keyword-card-more">
-                      <i className="fa-solid fa-circle-info" aria-hidden="true" />
-                      Xem chi tiết
-                    </span>
-                  ) : null}
-                </button>
-              ))}
+                );
+              })}
             </div>
           ) : null}
         </div>
@@ -363,9 +426,7 @@ function KeywordModal({ card, onClose }: { card: KeywordCard; onClose: () => voi
 
         <div className="kw-modal-body">
           <h3>{card.title}</h3>
-          <p className="kw-modal-lead">
-            Dựa vào bài học hôm nay, đây là các bước từ cài môi trường đến dùng AI để hoàn thành phần thực hành đơn.
-          </p>
+          <p className="kw-modal-lead">{card.description}</p>
 
           {card.detailSteps ? (
             <div className="kw-step-list">
@@ -382,15 +443,15 @@ function KeywordModal({ card, onClose }: { card: KeywordCard; onClose: () => voi
               ))}
             </div>
           ) : card.detail ? (
-            <ol className="kw-modal-detail">
+            <div className="kw-modal-detail">
               {card.detail
                 .split("\n")
                 .map((line) => line.trim())
                 .filter(Boolean)
                 .map((line) => (
-                  <li key={line}>{line.replace(/^\d+\.\s*/, "")}</li>
+                  <p key={line}>{line.replace(/^\d+\.\s*/, "")}</p>
                 ))}
-            </ol>
+            </div>
           ) : null}
 
           {card.example ? (
@@ -403,6 +464,341 @@ function KeywordModal({ card, onClose }: { card: KeywordCard; onClose: () => voi
             </div>
           ) : null}
         </div>
+      </div>
+    </div>
+  );
+}
+
+const TL_COLORS = ["#e85d4a", "#f59e0b", "#10b981", "#3b82f6"];
+
+function TimelineView({
+  items,
+  onCardSelect,
+}: {
+  items: KeywordCard[];
+  onCardSelect: (card: KeywordCard) => void;
+}) {
+  return (
+    <div className="slide-timeline">
+      {/* Row 1: content above the line */}
+      <div className="tl-row tl-row--above">
+        {items.map((item, i) => {
+          const color = TL_COLORS[i % TL_COLORS.length];
+          return (
+            <div key={item.term} className="tl-col">
+              {i % 2 === 0 && (
+                <>
+                  <button
+                    className="tl-card"
+                    onClick={() => onCardSelect(item)}
+                    type="button"
+                    style={{ borderTopColor: color }}
+                  >
+                    <span className="tl-title">{item.title}</span>
+                    <span className="tl-desc">{item.description}</span>
+                  </button>
+                  <span className="tl-year" style={{ color }}>{item.term}</span>
+                  <div className="tl-connector" style={{ background: color }} />
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Row 2: horizontal line + dots */}
+      <div className="tl-rail">
+        <div className="tl-line" />
+        {items.map((item, i) => {
+          const color = TL_COLORS[i % TL_COLORS.length];
+          return (
+            <div key={item.term} className="tl-col">
+              <div
+                className="tl-dot"
+                style={{ background: color, boxShadow: `0 0 0 3px #fff, 0 0 0 5px ${color}` }}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Row 3: content below the line */}
+      <div className="tl-row tl-row--below">
+        {items.map((item, i) => {
+          const color = TL_COLORS[i % TL_COLORS.length];
+          return (
+            <div key={item.term} className="tl-col">
+              {i % 2 === 1 && (
+                <>
+                  <div className="tl-connector" style={{ background: color }} />
+                  <span className="tl-year" style={{ color }}>{item.term}</span>
+                  <button
+                    className="tl-card"
+                    onClick={() => onCardSelect(item)}
+                    type="button"
+                    style={{ borderTopColor: color }}
+                  >
+                    <span className="tl-title">{item.title}</span>
+                    <span className="tl-desc">{item.description}</span>
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function annoTokenText(t: string | Prism.Token): string {
+  if (typeof t === "string") return t;
+  const c = t.content;
+  if (typeof c === "string") return c;
+  return (c as (string | Prism.Token)[]).map(annoTokenText).join("");
+}
+
+function buildAnnotatedNodes(
+  tokens: (string | Prism.Token)[],
+  annotations: CodeAnnotation[],
+  activeToken: string | null,
+  onAnnotationClick: (ann: CodeAnnotation) => void,
+  keyPrefix: string
+): React.ReactNode[] {
+  return tokens.map((t, i) => {
+    const key = `${keyPrefix}${i}`;
+    if (typeof t === "string") {
+      return <span key={key}>{t}</span>;
+    }
+    const fullText = annoTokenText(t);
+    const ann = annotations.find((a) => a.token === fullText);
+    const innerContent =
+      typeof t.content === "string"
+        ? t.content
+        : buildAnnotatedNodes(
+            t.content as (string | Prism.Token)[],
+            annotations,
+            activeToken,
+            onAnnotationClick,
+            `${key}-`
+          );
+    if (ann) {
+      return (
+        <button
+          key={key}
+          className={`code-annotation-btn${activeToken === fullText ? " active" : ""}`}
+          onClick={() => onAnnotationClick(ann)}
+          type="button"
+          title={ann.title}
+        >
+          <span className={`token ${t.type}`}>{innerContent}</span>
+        </button>
+      );
+    }
+    return (
+      <span key={key} className={`token ${t.type}`}>
+        {innerContent}
+      </span>
+    );
+  });
+}
+
+function useHighlight(code: string, language: string) {
+  const grammar = Prism.languages[language.toLowerCase()] ?? Prism.languages.markup;
+  return Prism.highlight(code, grammar, language.toLowerCase());
+}
+
+function CodeBlockView({ code, language = "HTML" }: { code: string; language?: string }) {
+  const [copied, setCopied] = useState(false);
+  const highlighted = useHighlight(code, language);
+
+  const handleCopy = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = code;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
+  return (
+    <div className="code-block">
+      <div className="code-block-header">
+        <span className="code-block-lang">{language}</span>
+        <button
+          className={`code-action-btn${copied ? " copied" : ""}`}
+          onClick={handleCopy}
+          type="button"
+        >
+          <i className={`fa-solid ${copied ? "fa-check" : "fa-copy"}`} aria-hidden="true" />
+          {copied ? "Đã sao chép" : "Sao chép"}
+        </button>
+      </div>
+      <pre>
+        <code dangerouslySetInnerHTML={{ __html: highlighted }} />
+      </pre>
+    </div>
+  );
+}
+
+function AnnotatedCodeBlockView({
+  code,
+  language = "HTML",
+  annotations,
+}: {
+  code: string;
+  language?: string;
+  annotations: CodeAnnotation[];
+}) {
+  const [activeAnnotation, setActiveAnnotation] = useState<CodeAnnotation | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const tokens = useMemo(() => Prism.tokenize(code, Prism.languages.markup), [code]);
+
+  const handleAnnotationClick = (ann: CodeAnnotation) => {
+    setActiveAnnotation((prev) => (prev?.token === ann.token ? null : ann));
+  };
+
+  const handleCopy = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = code;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
+  const activeToken = activeAnnotation?.token ?? null;
+  const nodes = buildAnnotatedNodes(
+    tokens as (string | Prism.Token)[],
+    annotations,
+    activeToken,
+    handleAnnotationClick,
+    "r"
+  );
+
+  return (
+    <div className={`code-block annotated-code-block${activeAnnotation ? " has-panel" : ""}`}>
+      <div className="annotated-code-main">
+        <div className="code-block-header">
+          <span className="code-block-lang">{language}</span>
+          <button
+            className={`code-action-btn${copied ? " copied" : ""}`}
+            onClick={handleCopy}
+            type="button"
+          >
+            <i className={`fa-solid ${copied ? "fa-check" : "fa-copy"}`} aria-hidden="true" />
+            {copied ? "Đã sao chép" : "Sao chép"}
+          </button>
+        </div>
+        <pre>
+          <code>{nodes}</code>
+        </pre>
+      </div>
+      <div className="code-annotation-panel">
+        <div className="code-annotation-panel__header">
+          <code className="code-annotation-panel__token">{activeAnnotation?.token ?? ""}</code>
+          <button
+            className="code-annotation-close"
+            onClick={() => setActiveAnnotation(null)}
+            type="button"
+            aria-label="Đóng"
+          >
+            <i className="fa-solid fa-xmark" aria-hidden="true" />
+          </button>
+        </div>
+        <p className="code-annotation-panel__title">{activeAnnotation?.title ?? ""}</p>
+        <p className="code-annotation-panel__desc">{activeAnnotation?.description ?? ""}</p>
+      </div>
+    </div>
+  );
+}
+
+function SingleHtmlDemo({ demo }: { demo: HtmlDemo }) {
+  const [showPreview, setShowPreview] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(demo.code);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = demo.code;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
+  const srcDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:16px;margin:0;line-height:1.6;}img{max-width:100%;}*{box-sizing:border-box;}</style></head><body>${demo.code}</body></html>`;
+
+  return (
+    <div className={`html-demo-row${showPreview ? " has-preview" : ""}`}>
+      <div className="code-block html-demo-code">
+        <div className="code-block-header">
+          <span className="code-block-lang">{demo.label}</span>
+          <div className="code-block-actions">
+            <button
+              className={`code-action-btn${copied ? " copied" : ""}`}
+              onClick={handleCopy}
+              type="button"
+            >
+              <i className={`fa-solid ${copied ? "fa-check" : "fa-copy"}`} aria-hidden="true" />
+              {copied ? "Đã sao chép" : "Sao chép"}
+            </button>
+            <button
+              className={`code-action-btn preview-btn${showPreview ? " active" : ""}`}
+              onClick={() => setShowPreview(!showPreview)}
+              type="button"
+            >
+              <i className={`fa-solid ${showPreview ? "fa-eye-slash" : "fa-eye"}`} aria-hidden="true" />
+              {showPreview ? "Ẩn kết quả" : "Xem kết quả"}
+            </button>
+          </div>
+        </div>
+        <pre>
+          <code dangerouslySetInnerHTML={{ __html: Prism.highlight(demo.code, Prism.languages.markup, "markup") }} />
+        </pre>
+      </div>
+      <div className="html-preview-wrapper">
+        <div className="html-preview-label">
+          <i className="fa-solid fa-globe" aria-hidden="true" />
+          Kết quả trên trình duyệt
+        </div>
+        <iframe
+          className="html-preview-frame"
+          srcDoc={srcDoc}
+          title={`Preview: ${demo.label}`}
+          sandbox="allow-same-origin"
+          style={{ height: demo.previewHeight ?? 300 }}
+        />
       </div>
     </div>
   );
