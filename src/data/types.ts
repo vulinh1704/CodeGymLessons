@@ -22,6 +22,7 @@ export type KeywordCard = {
   title: string;
   description: string;
   icon: string;
+  image?: string;
   detail?: string;
   detailSteps?: {
     step: string;
@@ -30,6 +31,14 @@ export type KeywordCard = {
     prompt: string;
   }[];
   example?: string;
+};
+
+export type FlowStep = {
+  icon: string;
+  title: string;
+  description: string;
+  note?: string;
+  highlight?: boolean;
 };
 
 export type LessonSlide = {
@@ -55,9 +64,11 @@ export type LessonSlide = {
   timeline?: KeywordCard[];
   titleImage?: string;
   codeBlock?: { code: string; language?: string };
-  annotatedCode?: { code: string; language?: string; annotations: CodeAnnotation[] };
+  annotatedCode?: { code: string; language?: string; annotations: CodeAnnotation[]; previewCode?: string; previewHeight?: number };
   htmlDemos?: HtmlDemo[];
+  flow?: FlowStep[];
   link?: { label: string; url: string };
+  codePractice?: { storageKey: string; targetImage?: string; targetAlt?: string; placeholder?: string };
 };
 
 export type Lesson = {

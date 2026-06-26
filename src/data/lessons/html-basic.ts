@@ -374,7 +374,7 @@ như thế này.</p>
       htmlDemos: [
         {
           label: "Các loại input phổ biến",
-          previewHeight: 430,
+          previewHeight: 620,
           code: `<p><label>Họ tên (type="text"):</label><br>
 <input type="text" placeholder="Nhập họ tên của bạn"></p>
 
@@ -387,6 +387,15 @@ như thế này.</p>
 <p><label>Ngày sinh (type="date"):</label><br>
 <input type="date"></p>
 
+<p><label>Nghề nghiệp (select — danh sách thả xuống):</label><br>
+<select name="job">
+  <option value="">-- Chọn nghề nghiệp --</option>
+  <option value="student">Học sinh / Sinh viên</option>
+  <option value="dev">Lập trình viên</option>
+  <option value="designer">Designer</option>
+  <option value="other">Khác</option>
+</select></p>
+
 <p><label>Giới tính (type="radio" — chỉ chọn 1):</label><br>
 <input type="radio" name="gender" value="male"> Nam &nbsp;
 <input type="radio" name="gender" value="female"> Nữ &nbsp;
@@ -396,6 +405,9 @@ như thế này.</p>
 <input type="checkbox"> Đọc sách &nbsp;
 <input type="checkbox"> Lập trình &nbsp;
 <input type="checkbox"> Thể thao</p>
+
+<p><label>Giới thiệu bản thân (textarea — nhập nhiều dòng):</label><br>
+<textarea name="bio" rows="4" placeholder="Nhập vài dòng giới thiệu về bạn..."></textarea></p>
 
 <p><input type="button" value="Nút thường"> &nbsp;
 <input type="submit" value="Gửi đi"> &nbsp;
@@ -408,6 +420,8 @@ như thế này.</p>
         "type=\"password\" — Ẩn ký tự khi gõ (hiện dấu chấm)",
         "type=\"radio\" — Chỉ chọn được 1 trong nhóm (cùng name)",
         "type=\"checkbox\" — Chọn được nhiều tùy ý",
+        "<select> + <option> — Danh sách thả xuống, chọn một giá trị từ danh sách có sẵn",
+        "<textarea> — Ô nhập nhiều dòng, thuộc tính rows xác định chiều cao ban đầu",
         "placeholder — Văn bản gợi ý hiện khi ô còn trống",
       ],
     },
@@ -432,147 +446,335 @@ như thế này.</p>
       ],
     },
     {
-      id: "html-form",
-      title: "Thẻ form — Biểu mẫu nhập liệu",
+      id: "form-what-is",
+      title: "Form là gì?",
       displayNumber: "07",
-      eyebrow: "Thẻ nâng cao",
-      icon: "fa-clipboard-list",
-      tone: "practice",
+      eyebrow: "Form — Khái niệm",
+      icon: "fa-wpforms",
+      tone: "concept",
       body: [
-        "Thẻ <form> nhóm các ô nhập liệu thành một biểu mẫu hoàn chỉnh. Khi người dùng nhấn Submit, tất cả dữ liệu trong form được gửi đi cùng nhau.",
-        "Form là thành phần thiết yếu của mọi trang đăng ký, đăng nhập, tìm kiếm và thanh toán trực tuyến.",
+        "Form (biểu mẫu) là thành phần dùng để thu thập thông tin từ người dùng. Mỗi lần bạn đăng ký, đăng nhập, tìm kiếm hay thanh toán — bạn đang tương tác với một form.",
       ],
-      htmlDemos: [
+      callout: {
+        label: "Thực tế",
+        text: "Hơn 90% trang web có ít nhất một form. Học form đồng nghĩa với học cách trang web tương tác với con người.",
+      },
+      keywordCards: [
         {
-          label: "Form đăng ký tài khoản",
-          previewHeight: 560,
-          code: `<form>
-  <h2>Đăng ký tài khoản</h2>
-
-  <p>
-    <label for="fullname">Họ và tên: *</label><br>
-    <input type="text" id="fullname" name="fullname"
-           placeholder="Nhập họ tên đầy đủ" required>
-  </p>
-
-  <p>
-    <label for="email">Email: *</label><br>
-    <input type="email" id="email" name="email"
-           placeholder="email@example.com" required>
-  </p>
-
-  <p>
-    <label for="password">Mật khẩu: *</label><br>
-    <input type="password" id="password" name="password"
-           placeholder="Tối thiểu 8 ký tự" minlength="8">
-  </p>
-
-  <p>
-    <label for="role">Bạn là:</label><br>
-    <select id="role" name="role">
-      <option value="">-- Chọn vai trò --</option>
-      <option value="student">Học viên</option>
-      <option value="teacher">Giảng viên</option>
-      <option value="other">Khác</option>
-    </select>
-  </p>
-
-  <p>
-    <label for="note">Ghi chú thêm:</label><br>
-    <textarea id="note" name="note" rows="3"
-              placeholder="Nhập ghi chú (nếu có)"></textarea>
-  </p>
-
-  <p>
-    <input type="checkbox" id="agree" name="agree" required>
-    <label for="agree">Tôi đồng ý với điều khoản sử dụng *</label>
-  </p>
-
-  <p>
-    <button type="submit">Đăng ký ngay</button>
-    <button type="reset">Xóa hết</button>
-  </p>
-</form>`,
+          term: "Form đăng ký",
+          title: "Sign Up",
+          description: "",
+          icon: "fa-user-plus",
+          image: "/lesson-assets/sign-up-form.png",
+        },
+        {
+          term: "Form đăng nhập",
+          title: "Sign In",
+          description: "",
+          icon: "fa-right-to-bracket",
+          image: "/lesson-assets/sign-in-form.png",
+        },
+        {
+          term: "Form tìm kiếm",
+          title: "Search",
+          description: "",
+          icon: "fa-magnifying-glass",
+          image: "/lesson-assets/search-form.png",
+        },
+        {
+          term: "Form thanh toán",
+          title: "Checkout",
+          description: "",
+          icon: "fa-credit-card",
+          image: "/lesson-assets/thanh_toan.png",
         },
       ],
-      checklist: [
-        "<form> — Bao bọc toàn bộ các trường nhập liệu",
-        "<label for=\"id\"> — Nhãn liên kết với input qua thuộc tính id (nhấn nhãn = focus ô nhập)",
-        "<select> và <option> — Danh sách thả xuống",
-        "<textarea> — Ô nhập nhiều dòng văn bản (rows xác định chiều cao)",
-        "required — Bắt buộc nhập trước khi submit",
-        "<button type=\"submit\"> — Nút gửi form  |  <button type=\"reset\"> — Nút xóa",
+    },
+    {
+      id: "form-in-html",
+      title: "Form trong HTML hoạt động như thế nào?",
+      displayNumber: "07.1",
+      isSubSlide: true,
+      eyebrow: "Form — Cách hoạt động",
+      icon: "fa-arrows-left-right",
+      tone: "concept",
+      body: [
+        "Mỗi lần nhấn Submit, form trải qua 5 bước liên tiếp — từ lúc người dùng gõ phím đến khi nhận được kết quả từ server.",
       ],
+      flow: [
+        {
+          icon: "fa-pen-to-square",
+          title: "Người dùng điền",
+          description: "Gõ vào input, chọn option, tick checkbox",
+        },
+        {
+          icon: "fa-computer-mouse",
+          title: "Nhấn Submit",
+          description: "Click nút Submit hoặc nhấn Enter",
+        },
+        {
+          icon: "fa-box-archive",
+          title: "Trình duyệt đóng gói",
+          description: "Ghép name + value thành chuỗi dữ liệu",
+          note: "hoten=An&email=an@mail.com",
+          highlight: true,
+        },
+        {
+          icon: "fa-paper-plane",
+          title: "Gửi HTTP Request",
+          description: "Đến địa chỉ action bằng method GET hoặc POST",
+        },
+        {
+          icon: "fa-server",
+          title: "Server phản hồi",
+          description: "Xử lý dữ liệu, trả về trang mới hoặc thông báo",
+        },
+      ],
+      callout: {
+        label: "Điểm mấu chốt",
+        text: "Mỗi <input> phải có thuộc tính name — đây là tên biến trong gói dữ liệu. Thiếu name, trình duyệt bỏ qua ô đó hoàn toàn khi gửi.",
+      },
+    },
+    {
+      id: "form-structure",
+      title: "Cấu trúc thẻ <form>",
+      displayNumber: "07.2",
+      isSubSlide: true,
+      eyebrow: "Form — Thuộc tính",
+      icon: "fa-code",
+      tone: "concept",
+      body: [
+        "Nhấn vào từng thuộc tính được gạch chân để xem giải thích và các giá trị có thể dùng.",
+      ],
+      annotatedCode: {
+        language: "HTML",
+        code: `<form
+  action="/xu-ly-dang-ky"
+  method="POST">
+
+  <input type="text"  name="hoten"  required>
+  <input type="email" name="email"  required>
+  <input type="password" name="matkhau">
+
+  <button type="submit">Gửi đi</button>
+  <button type="reset">Xóa hết</button>
+
+</form>`,
+        annotations: [
+          {
+            token: "action",
+            title: "action — Địa chỉ nhận dữ liệu",
+            description:
+              'Chỉ định URL mà trình duyệt gửi dữ liệu form đến khi nhấn Submit.\n\n• "/xu-ly" — Đường dẫn tương đối: gửi đến cùng domain.\n• "https://api.example.com/form" — URL đầy đủ: gửi đến server khác.\n• (bỏ trống) — Gửi về chính URL trang hiện tại.',
+          },
+          {
+            token: "method",
+            title: "method — Phương thức gửi dữ liệu",
+            description:
+              'Quy định cách dữ liệu được đóng gói khi gửi đi.\n\n• "GET" — Dữ liệu gắn vào URL: ?hoten=An&email=an@mail.com. Dùng cho tìm kiếm, lọc — URL có thể chia sẻ, bookmark.\n• "POST" — Dữ liệu ẩn trong thân request, không hiện trong URL. Bắt buộc dùng cho mật khẩu, thanh toán, dữ liệu nhạy cảm.',
+          },
+          {
+            token: "name",
+            title: "name — Tên trường dữ liệu",
+            description:
+              'Trên <input>, <select>, <textarea>: xác định tên biến trong gói dữ liệu gửi đi.\n\n• Dữ liệu gửi đi có dạng: hoten=Nguyen+Van+An&email=an@mail.com\n• Thiếu name → trình duyệt bỏ qua ô đó hoàn toàn khi submit.\n• Trùng name → radio button (chỉ chọn 1) hoặc mảng giá trị.\n\nLưu ý: name khác với id. id dùng để CSS và JS tham chiếu, name dùng để gửi dữ liệu.',
+          },
+          {
+            token: "type",
+            title: "type — Kiểu ô nhập liệu",
+            description:
+              'Quyết định giao diện và hành vi của <input>.\n\n• "text" — Văn bản thông thường.\n• "email" — Kiểm tra định dạng email hợp lệ.\n• "password" — Ẩn ký tự khi gõ.\n• "number" — Chỉ nhận số, có mũi tên tăng/giảm.\n• "date" — Hiện lịch chọn ngày.\n• "checkbox" — Ô tích, chọn nhiều.\n• "radio" — Nút tròn, chọn 1 trong nhóm.\n• "file" — Chọn file từ máy tính.\n• "hidden" — Ẩn hoàn toàn, gửi dữ liệu ngầm.\n• "submit" / "reset" / "button" — Nút hành động.',
+          },
+          {
+            token: "required",
+            title: "required — Bắt buộc nhập",
+            description:
+              'Thuộc tính boolean — chỉ cần viết tên, không cần giá trị.\n\n• Có required → Trình duyệt chặn submit và hiện thông báo nếu ô còn trống.\n• Kết hợp type="email" → kiểm tra cả định dạng email đúng không.\n• Kết hợp minlength="8" → kiểm tra độ dài tối thiểu.\n• Kết hợp pattern="..." → kiểm tra theo biểu thức chính quy.\n\nLưu ý: validation phía client chỉ hỗ trợ UX — server vẫn phải tự kiểm tra lại vì người dùng có thể bỏ qua bằng DevTools.',
+          },
+        ],
+      },
     },
     {
       id: "html-table",
       title: "Thẻ table — Bảng dữ liệu",
-      displayNumber: "07.1",
-      isSubSlide: true,
+      displayNumber: "08",
       eyebrow: "Thẻ nâng cao",
       icon: "fa-table",
       tone: "practice",
       body: [
-        "Thẻ <table> dùng để hiển thị dữ liệu dạng bảng — điểm học sinh, lịch học, báo giá. Bảng HTML có cấu trúc lồng nhau: table → thead/tbody → tr (hàng) → th/td (ô).",
+        "Thẻ <table> hiển thị dữ liệu dạng bảng. Bảng có cấu trúc lồng nhau: <table> → <thead>/<tbody> → <tr> (hàng) → <th>/<td> (ô). Nhấn vào từng thẻ để xem giải thích.",
       ],
-      htmlDemos: [
-        {
-          label: "Bảng điểm học viên",
-          previewHeight: 240,
-          code: `<table border="1" cellpadding="10" cellspacing="0"
-       style="border-collapse: collapse; width: 100%;">
-  <thead style="background: #1f2e73; color: white;">
+      annotatedCode: {
+        code: `<table border="1" cellpadding="8" cellspacing="0">
+  <thead>
     <tr>
-      <th>STT</th>
-      <th>Họ và tên</th>
-      <th>Điểm HTML</th>
-      <th>Điểm CSS</th>
-      <th>Kết quả</th>
+      <th colspan="2">Thông tin học viên</th>
+      <th>Điểm</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>1</td>
+      <td rowspan="2">Nhóm A</td>
       <td>Nguyễn Văn An</td>
-      <td>8.5</td>
       <td>9.0</td>
-      <td style="color: green; font-weight: bold;">✓ Đạt</td>
-    </tr>
-    <tr style="background: #f8f9fa;">
-      <td>2</td>
-      <td>Trần Thị Bình</td>
-      <td>7.0</td>
-      <td>8.5</td>
-      <td style="color: green; font-weight: bold;">✓ Đạt</td>
     </tr>
     <tr>
-      <td>3</td>
-      <td>Lê Văn Cường</td>
-      <td>4.5</td>
-      <td>5.0</td>
-      <td style="color: red; font-weight: bold;">✗ Chưa đạt</td>
+      <td>Trần Thị Bình</td>
+      <td>8.5</td>
     </tr>
   </tbody>
 </table>`,
-        },
-      ],
-      checklist: [
-        "<table> — Thẻ cha bao bọc toàn bộ bảng",
-        "<thead> — Phần đầu bảng (hàng tiêu đề cột)",
-        "<tbody> — Phần thân bảng (các hàng dữ liệu)",
-        "<tr> — Table Row: một hàng ngang trong bảng",
-        "<th> — Table Header: ô tiêu đề (tự động in đậm, căn giữa)",
-        "<td> — Table Data: ô dữ liệu thông thường",
-      ],
+        language: "html",
+        annotations: [
+          {
+            token: "border",
+            title: "border",
+            description: "Độ dày đường viền bảng (đơn vị pixel).\nborder=\"1\" → viền 1px\nborder=\"0\" → ẩn viền (mặc định)\nThực tế nên dùng CSS border thay thế.",
+          },
+          {
+            token: "cellpadding",
+            title: "cellpadding",
+            description: "Khoảng cách giữa nội dung và mép ô (padding bên trong mỗi ô).\ncellpadding=\"8\" → thêm 8px đệm bên trong.",
+          },
+          {
+            token: "cellspacing",
+            title: "cellspacing",
+            description: "Khoảng cách giữa các ô với nhau.\ncellspacing=\"0\" → các ô sát nhau, không có khoảng trống.",
+          },
+          {
+            token: "colspan",
+            title: "colspan",
+            description: "Gộp nhiều cột thành một ô.\ncolspan=\"2\" → ô đó chiếm 2 cột liên tiếp.\nDùng khi tiêu đề cần bao quát nhiều cột.",
+          },
+          {
+            token: "rowspan",
+            title: "rowspan",
+            description: "Gộp nhiều hàng thành một ô.\nrowspan=\"2\" → ô đó kéo dài qua 2 hàng.\nDùng để nhóm dữ liệu có cùng nhãn.",
+          },
+          {
+            token: "<thead>",
+            title: "<thead>",
+            description: "Phần đầu bảng — chứa hàng tiêu đề cột.\nTrình duyệt giữ phần này cố định khi bảng có scroll dọc.",
+          },
+          {
+            token: "<tbody>",
+            title: "<tbody>",
+            description: "Phần thân bảng — chứa toàn bộ hàng dữ liệu.\nNếu bỏ qua, trình duyệt tự thêm <tbody> ngầm.",
+          },
+          {
+            token: "<tr>",
+            title: "<tr> — Table Row",
+            description: "Một hàng ngang trong bảng.\nChỉ được chứa <th> hoặc <td> bên trong.",
+          },
+          {
+            token: "<th>",
+            title: "<th> — Table Header",
+            description: "Ô tiêu đề cột — tự động in đậm và căn giữa.\nDùng trong <thead> để đặt tên cho từng cột.",
+          },
+          {
+            token: "<td>",
+            title: "<td> — Table Data",
+            description: "Ô dữ liệu thông thường.\nCó thể chứa text, ảnh, hoặc bất kỳ thẻ HTML nào khác.",
+          },
+        ],
+        previewCode: `<table border="1" cellpadding="8" cellspacing="0"
+       style="border-collapse: collapse; width: 100%; font-family: sans-serif;">
+  <thead style="background: #1f2e73; color: white; text-align: left;">
+    <tr>
+      <th colspan="2">Thông tin học viên</th>
+      <th>Điểm</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="2" style="font-weight: bold;">Nhóm A</td>
+      <td>Nguyễn Văn An</td>
+      <td>9.0</td>
+    </tr>
+    <tr>
+      <td>Trần Thị Bình</td>
+      <td>8.5</td>
+    </tr>
+  </tbody>
+</table>`,
+        previewHeight: 180,
+      },
       callout: {
         label: "Lưu ý quan trọng",
-        text: "Không dùng table để tạo bố cục trang web — chỉ dùng cho dữ liệu thực sự là bảng.",
+        text: "Không dùng <table> để tạo bố cục trang web — chỉ dùng cho dữ liệu thực sự là bảng.",
+      },
+    },
+    {
+      id: "html-table-practice",
+      title: "Thực hành — Tạo bảng HTML",
+      displayNumber: "08.1",
+      isSubSlide: true,
+      eyebrow: "Thực hành",
+      icon: "fa-pen-to-square",
+      tone: "practice",
+      body: [
+        "Dựa vào hình mẫu bên dưới, hãy tự viết code HTML để tạo ra bảng tương tự. Sử dụng colspan và rowspan để gộp ô đúng cách.",
+      ],
+      codePractice: {
+        storageKey: "practice_html_table",
+        targetImage: "/lesson-assets/thuc_hanh_table.png",
+        targetAlt: "Bảng HTML cần tạo",
+        placeholder: `<table border="1">
+  <thead>
+    <tr>
+      <th>Level1</th>
+      ...
+    </tr>
+  </thead>
+  <tbody>
+    ...
+  </tbody>
+</table>`,
+      },
+    },
+    {
+      id: "html-practice-final",
+      title: "Bài tập tổng hợp — Form & Table",
+      displayNumber: "09",
+      eyebrow: "Thực hành",
+      icon: "fa-pen-to-square",
+      tone: "practice",
+      body: [
+        "Kết hợp tất cả kiến thức đã học: form, input, select, radio, checkbox, textarea và table. Hãy tái tạo trang khảo sát trong ảnh mục tiêu.",
+      ],
+      codePractice: {
+        storageKey: "practice_html_final",
+        targetImage: "/lesson-assets/thuc_hanh_html_tong_hop.png",
+        targetAlt: "Trang khảo sát Market Research Survey",
+        placeholder: `<form>
+  <h1>Market Research Survey</h1>
+  <p>...</p>
+
+  <!-- Dropdown -->
+  <p><label>What is your age range?</label><br>
+    <select name="age">...</select>
+  </p>
+
+  <!-- Radio buttons -->
+  <p><strong>Gender Identity</strong><br>
+    <input type="radio" name="gender" value="male"> Male<br>
+    ...
+  </p>
+
+  <!-- Checkboxes -->
+  ...
+
+  <!-- Table với radio -->
+  <table>...</table>
+
+  <button type="submit">Submit</button>
+</form>`,
       },
     },
     {
       id: "html-summary",
       title: "Tổng kết — Bạn đã học được gì?",
-      displayNumber: "08",
+      displayNumber: "10",
       eyebrow: "Tổng kết",
       icon: "fa-flag-checkered",
       tone: "summary",

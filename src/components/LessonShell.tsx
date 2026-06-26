@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Prism from "prismjs";
 import "prismjs/components/prism-markup";
-import type { CodeAnnotation, CourseModule, HtmlDemo, KeywordCard, Lesson, LessonSlide, SlideTone } from "@/data/curriculum";
+import type { CodeAnnotation, CourseModule, FlowStep, HtmlDemo, KeywordCard, Lesson, LessonSlide, SlideTone } from "@/data/curriculum";
 
 type LessonShellProps = {
   module: CourseModule;
@@ -37,6 +37,7 @@ export function LessonShell({ module, lesson, initialSlideIndex = 0 }: LessonShe
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<KeywordCard | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{ src: string; caption: string } | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
 
   const activeSlide = lesson.slides[activeIndex];
@@ -51,6 +52,13 @@ export function LessonShell({ module, lesson, initialSlideIndex = 0 }: LessonShe
         if (event.key === "Escape") setSelectedCard(null);
         return;
       }
+      if (selectedImage) {
+        if (event.key === "Escape") setSelectedImage(null);
+        return;
+      }
+
+      const tag = (event.target as HTMLElement).tagName;
+      if (tag === "TEXTAREA" || tag === "INPUT") return;
 
       if (event.key === "ArrowRight" || event.key === "PageDown") {
         setActiveIndex((current) => Math.min(current + 1, lesson.slides.length - 1));
@@ -67,7 +75,7 @@ export function LessonShell({ module, lesson, initialSlideIndex = 0 }: LessonShe
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [lesson.slides.length, selectedCard]);
+  }, [lesson.slides.length, selectedCard, selectedImage]);
 
   useEffect(() => {
     setCopiedPrompt(null);
@@ -195,6 +203,7 @@ export function LessonShell({ module, lesson, initialSlideIndex = 0 }: LessonShe
           slide={activeSlide}
           index={activeIndex}
           onCardSelect={setSelectedCard}
+          onImageSelect={setSelectedImage}
           onCopyPrompt={handleCopyPrompt}
           copiedPrompt={copiedPrompt}
         />
@@ -231,6 +240,9 @@ export function LessonShell({ module, lesson, initialSlideIndex = 0 }: LessonShe
       {selectedCard && (
         <KeywordModal card={selectedCard} onClose={() => setSelectedCard(null)} />
       )}
+      {selectedImage && (
+        <ImageLightbox src={selectedImage.src} caption={selectedImage.caption} onClose={() => setSelectedImage(null)} />
+      )}
     </main>
   );
 }
@@ -239,12 +251,14 @@ function SlideView({
   slide,
   index,
   onCardSelect,
+  onImageSelect,
   onCopyPrompt,
   copiedPrompt,
 }: {
   slide: LessonSlide;
   index: number;
   onCardSelect: (card: KeywordCard) => void;
+  onImageSelect: (img: { src: string; caption: string }) => void;
   onCopyPrompt: (prompt: string) => void;
   copiedPrompt: string | null;
 }) {
@@ -271,6 +285,10 @@ function SlideView({
             ))}
           </div>
 
+          {slide.flow ? (
+            <FlowView steps={slide.flow} />
+          ) : null}
+
           {slide.callout ? (
             <aside className="callout">
               <span>{slide.callout.label}</span>
@@ -295,6 +313,8 @@ function SlideView({
               code={slide.annotatedCode.code}
               language={slide.annotatedCode.language}
               annotations={slide.annotatedCode.annotations}
+              previewCode={slide.annotatedCode.previewCode}
+              previewHeight={slide.annotatedCode.previewHeight}
             />
           ) : null}
 
@@ -308,6 +328,15 @@ function SlideView({
                 <SingleHtmlDemo key={demo.label} demo={demo} />
               ))}
             </div>
+          ) : null}
+
+          {slide.codePractice ? (
+            <CodePracticeView
+              storageKey={slide.codePractice.storageKey}
+              targetImage={slide.codePractice.targetImage}
+              targetAlt={slide.codePractice.targetAlt}
+              placeholder={slide.codePractice.placeholder}
+            />
           ) : null}
 
           {slide.copyPrompts ? (
@@ -360,7 +389,14 @@ function SlideView({
             <div className="keyword-grid">
               {slide.keywordCards.map((card, cardIndex) => {
                 const isClickable = !!(card.detail || card.detailSteps);
-                const inner = (
+                const inner = card.image ? (
+                  <>
+                    <div className="keyword-card-hero">
+                      <img src={card.image} alt={card.title} />
+                    </div>
+                    <strong className="keyword-card-caption">{card.term}</strong>
+                  </>
+                ) : (
                   <>
                     <div className="keyword-card-top">
                       <span>{String(cardIndex + 1).padStart(2, "0")}</span>
@@ -377,6 +413,19 @@ function SlideView({
                     ) : null}
                   </>
                 );
+                if (card.image) {
+                  return (
+                    <button
+                      className="keyword-card keyword-card--image"
+                      key={card.term}
+                      onClick={() => onImageSelect({ src: card.image!, caption: card.term })}
+                      type="button"
+                      aria-label={`Xem ảnh: ${card.term}`}
+                    >
+                      {inner}
+                    </button>
+                  );
+                }
                 return isClickable ? (
                   <button
                     className="keyword-card"
@@ -563,7 +612,8 @@ function buildAnnotatedNodes(
   annotations: CodeAnnotation[],
   activeToken: string | null,
   onAnnotationClick: (ann: CodeAnnotation) => void,
-  keyPrefix: string
+  keyPrefix: string,
+  seen: Set<string>
 ): React.ReactNode[] {
   return tokens.map((t, i) => {
     const key = `${keyPrefix}${i}`;
@@ -580,9 +630,11 @@ function buildAnnotatedNodes(
             annotations,
             activeToken,
             onAnnotationClick,
-            `${key}-`
+            `${key}-`,
+            seen
           );
-    if (ann) {
+    if (ann && !seen.has(fullText)) {
+      seen.add(fullText);
       return (
         <button
           key={key}
@@ -655,13 +707,18 @@ function AnnotatedCodeBlockView({
   code,
   language = "HTML",
   annotations,
+  previewCode,
+  previewHeight,
 }: {
   code: string;
   language?: string;
   annotations: CodeAnnotation[];
+  previewCode?: string;
+  previewHeight?: number;
 }) {
   const [activeAnnotation, setActiveAnnotation] = useState<CodeAnnotation | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const tokens = useMemo(() => Prism.tokenize(code, Prism.languages.markup), [code]);
 
@@ -694,26 +751,59 @@ function AnnotatedCodeBlockView({
     annotations,
     activeToken,
     handleAnnotationClick,
-    "r"
+    "r",
+    new Set<string>()
   );
 
+  const effectivePreview = previewCode ?? code;
+  const srcDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:16px;margin:0;line-height:1.6;}img{max-width:100%;}*{box-sizing:border-box;}</style></head><body>${effectivePreview}</body></html>`;
+
   return (
-    <div className={`code-block annotated-code-block${activeAnnotation ? " has-panel" : ""}`}>
+    <div className={`annotated-code-block${activeAnnotation ? " has-panel" : ""}${showPreview ? " has-preview" : ""}`}>
       <div className="annotated-code-main">
-        <div className="code-block-header">
-          <span className="code-block-lang">{language}</span>
-          <button
-            className={`code-action-btn${copied ? " copied" : ""}`}
-            onClick={handleCopy}
-            type="button"
-          >
-            <i className={`fa-solid ${copied ? "fa-check" : "fa-copy"}`} aria-hidden="true" />
-            {copied ? "Đã sao chép" : "Sao chép"}
-          </button>
+        <div className="code-block code-block--annotated">
+          <div className="code-block-header">
+            <span className="code-block-lang">{language}</span>
+            <div className="code-block-actions">
+              <button
+                className={`code-action-btn${copied ? " copied" : ""}`}
+                onClick={handleCopy}
+                type="button"
+              >
+                <i className={`fa-solid ${copied ? "fa-check" : "fa-copy"}`} aria-hidden="true" />
+                {copied ? "Đã sao chép" : "Sao chép"}
+              </button>
+              {previewCode !== undefined || previewHeight !== undefined ? (
+                <button
+                  className={`code-action-btn preview-btn${showPreview ? " active" : ""}`}
+                  onClick={() => setShowPreview(!showPreview)}
+                  type="button"
+                >
+                  <i className={`fa-solid ${showPreview ? "fa-eye-slash" : "fa-eye"}`} aria-hidden="true" />
+                  {showPreview ? "Ẩn kết quả" : "Xem kết quả"}
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <pre>
+            <code>{nodes}</code>
+          </pre>
         </div>
-        <pre>
-          <code>{nodes}</code>
-        </pre>
+        {showPreview && (
+          <div className="html-preview-wrapper">
+            <div className="html-preview-label">
+              <i className="fa-solid fa-globe" aria-hidden="true" />
+              Kết quả trên trình duyệt
+            </div>
+            <iframe
+              className="html-preview-frame"
+              srcDoc={srcDoc}
+              title="Preview"
+              sandbox="allow-same-origin"
+              style={{ height: previewHeight ?? 300 }}
+            />
+          </div>
+        )}
       </div>
       <div className="code-annotation-panel">
         <div className="code-annotation-panel__header">
@@ -728,7 +818,11 @@ function AnnotatedCodeBlockView({
           </button>
         </div>
         <p className="code-annotation-panel__title">{activeAnnotation?.title ?? ""}</p>
-        <p className="code-annotation-panel__desc">{activeAnnotation?.description ?? ""}</p>
+        <div className="code-annotation-panel__desc">
+          {(activeAnnotation?.description ?? "").split("\n").map((line, i) =>
+            line === "" ? <br key={i} /> : <p key={i}>{line}</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -804,6 +898,41 @@ function SingleHtmlDemo({ demo }: { demo: HtmlDemo }) {
   );
 }
 
+function FlowView({ steps }: { steps: FlowStep[] }) {
+  return (
+    <div className="slide-flow">
+      {steps.map((step, i) => (
+        <React.Fragment key={step.title}>
+          <div className={`flow-step${step.highlight ? " flow-step--highlight" : ""}`}>
+            <div className="flow-step-icon">
+              <i className={`fa-solid ${step.icon}`} aria-hidden="true" />
+            </div>
+            <strong className="flow-step-title">{step.title}</strong>
+            <p className="flow-step-desc">{step.description}</p>
+            {step.note && <code className="flow-step-note">{step.note}</code>}
+          </div>
+          {i < steps.length - 1 && (
+            <div className="flow-connector" aria-hidden="true">
+              <i className="fa-solid fa-chevron-right" />
+            </div>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function ImageLightbox({ src, caption, onClose }: { src: string; caption: string; onClose: () => void }) {
+  return (
+    <div className="img-lightbox-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label={caption}>
+      <button className="img-lightbox-close" onClick={onClose} type="button" aria-label="Đóng">
+        <i className="fa-solid fa-xmark" aria-hidden="true" />
+      </button>
+      <img src={src} alt={caption} onClick={(e) => e.stopPropagation()} />
+    </div>
+  );
+}
+
 function getSlideNumber(slide: LessonSlide, index: number) {
   return slide.displayNumber ?? String(index + 1).padStart(2, "0");
 }
@@ -811,4 +940,317 @@ function getSlideNumber(slide: LessonSlide, index: number) {
 function clampSlideIndex(index: number, slideCount: number) {
   if (!Number.isFinite(index)) return 0;
   return Math.min(Math.max(Math.trunc(index), 0), Math.max(slideCount - 1, 0));
+}
+
+function formatHTML(html: string): string {
+  const TAB = "  ";
+  const VOID = new Set(["br", "hr", "img", "input", "meta", "link", "area", "col", "embed"]);
+  let depth = 0;
+  const lines = html
+    .replace(/>\s*</g, ">\n<")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  return lines
+    .map((line) => {
+      const isClose = /^<\//.test(line);
+      const tagNameMatch = line.match(/^<\/?([a-zA-Z][a-zA-Z0-9]*)/);
+      const tagName = tagNameMatch ? tagNameMatch[1].toLowerCase() : "";
+      const isSelfClose = line.endsWith("/>") || VOID.has(tagName);
+
+      if (isClose) depth = Math.max(0, depth - 1);
+      const out = TAB.repeat(depth) + line;
+      if (!isClose && !isSelfClose && tagName) depth++;
+      return out;
+    })
+    .join("\n");
+}
+
+const EMMET_SNIPPETS: Record<string, { template: string; cursor: number }> = {
+  // Table
+  table:    { template: "<table>\n  \n</table>",                                             cursor: 10 },
+  thead:    { template: "<thead>\n    \n  </thead>",                                         cursor: 11 },
+  tbody:    { template: "<tbody>\n    \n  </tbody>",                                         cursor: 11 },
+  tr:       { template: "<tr>\n    \n  </tr>",                                               cursor: 9  },
+  th:       { template: "<th></th>",                                                         cursor: 4  },
+  td:       { template: "<td></td>",                                                         cursor: 4  },
+  // Form
+  form:     { template: "<form action=\"\" method=\"post\">\n  \n</form>",                   cursor: 26 },
+  label:    { template: "<label for=\"\"></label>",                                          cursor: 11 },
+  input:    { template: "<input type=\"text\" name=\"\" placeholder=\"\">",                  cursor: 13 },
+  select:   { template: "<select name=\"\">\n  <option value=\"\"></option>\n</select>",     cursor: 16 },
+  option:   { template: "<option value=\"\"></option>",                                      cursor: 15 },
+  textarea: { template: "<textarea name=\"\" rows=\"4\" placeholder=\"\"></textarea>",       cursor: 15 },
+  button:   { template: "<button type=\"submit\"></button>",                                 cursor: 22 },
+  // Text
+  h1:       { template: "<h1></h1>",                                                         cursor: 4  },
+  h2:       { template: "<h2></h2>",                                                         cursor: 4  },
+  h3:       { template: "<h3></h3>",                                                         cursor: 4  },
+  p:        { template: "<p></p>",                                                           cursor: 3  },
+  strong:   { template: "<strong></strong>",                                                 cursor: 8  },
+  span:     { template: "<span></span>",                                                     cursor: 6  },
+  div:      { template: "<div>\n  \n</div>",                                                 cursor: 8  },
+};
+
+const SUGGEST_TAGS = [
+  "table", "thead", "tbody", "tr", "th", "td",
+  "form", "label", "input", "select", "option", "textarea", "button",
+  "h1", "h2", "h3", "p", "strong", "span", "div", "br",
+];
+
+function CodePracticeView({
+  storageKey,
+  targetImage,
+  targetAlt,
+  placeholder,
+}: {
+  storageKey: string;
+  targetImage?: string;
+  targetAlt?: string;
+  placeholder?: string;
+}) {
+  const [code, setCode] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionIdx, setSuggestionIdx] = useState(0);
+  const [dropdownTop, setDropdownTop] = useState(0);
+  const [dropdownLeft, setDropdownLeft] = useState(0);
+  const taRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const updateDropdownPos = () => {
+    const ta = taRef.current;
+    if (!ta) return;
+    const pos = ta.selectionStart;
+    const textBefore = ta.value.slice(0, pos);
+    const lines = textBefore.split("\n");
+    const lineIndex = lines.length - 1;
+    const lineHeight = 22.5; // 13.5px font * 1.65 line-height
+    const paddingTop = 14;
+    const paddingLeft = 16;
+    // measure character width roughly via canvas
+    const charWidth = 8.1; // approx for 13.5px monospace
+    const col = lines[lineIndex].length;
+    setDropdownTop(paddingTop + (lineIndex + 1) * lineHeight);
+    setDropdownLeft(paddingLeft + col * charWidth);
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) setCode(saved);
+  }, [storageKey]);
+
+  const applyValue = (val: string, cursorPos?: number) => {
+    setCode(val);
+    localStorage.setItem(storageKey, val);
+    if (cursorPos !== undefined && taRef.current) {
+      requestAnimationFrame(() => {
+        taRef.current!.selectionStart = cursorPos;
+        taRef.current!.selectionEnd = cursorPos;
+      });
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    const pos = e.target.selectionStart ?? val.length;
+    applyValue(val);
+
+    // Show autocomplete after "<"
+    const before = val.slice(0, pos);
+    const tagMatch = before.match(/<(\w*)$/);
+    if (tagMatch) {
+      const partial = tagMatch[1].toLowerCase();
+      const filtered = SUGGEST_TAGS.filter((t) => t.startsWith(partial) && t !== partial);
+      setSuggestions(filtered);
+      setSuggestionIdx(0);
+      requestAnimationFrame(updateDropdownPos);
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const applySuggestion = (tag: string) => {
+    const ta = taRef.current;
+    if (!ta) return;
+    const pos = ta.selectionStart;
+    const before = code.slice(0, pos);
+    const after = code.slice(pos);
+    const tagMatch = before.match(/<(\w*)$/);
+    if (!tagMatch) return;
+    const replaceStart = pos - tagMatch[0].length;
+    const snippet = EMMET_SNIPPETS[tag];
+    const insert = snippet ? `<${snippet.template.slice(1)}` : `<${tag}></${tag}>`;
+    const newCode = code.slice(0, replaceStart) + insert + after;
+    const newCursor = replaceStart + (snippet ? snippet.template.indexOf("\n") + 5 : tag.length + 2);
+    setSuggestions([]);
+    applyValue(newCode, replaceStart + (snippet ? snippet.cursor + 1 : tag.length + 2));
+    ta.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const ta = taRef.current!;
+
+    // Navigate suggestions with arrow keys
+    if (suggestions.length > 0) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setSuggestionIdx((i) => Math.min(i + 1, suggestions.length - 1)); return; }
+      if (e.key === "ArrowUp")   { e.preventDefault(); setSuggestionIdx((i) => Math.max(i - 1, 0)); return; }
+      if (e.key === "Escape")    { e.preventDefault(); setSuggestions([]); return; }
+      if (e.key === "Enter")     { e.preventDefault(); applySuggestion(suggestions[suggestionIdx]); return; }
+    }
+
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const pos = ta.selectionStart;
+      const before = code.slice(0, pos);
+      const after = code.slice(pos);
+
+      const wordMatch = before.match(/(\w+)$/);
+      if (wordMatch) {
+        const word = wordMatch[1].toLowerCase();
+        const snippet = EMMET_SNIPPETS[word];
+        if (snippet) {
+          const start = pos - wordMatch[1].length;
+          const newCode = code.slice(0, start) + snippet.template + after;
+          applyValue(newCode, start + snippet.cursor);
+          setSuggestions([]);
+          return;
+        }
+      }
+      const newCode = before + "  " + after;
+      applyValue(newCode, pos + 2);
+      return;
+    }
+
+    // Ctrl+D — nhân đôi dòng hiện tại
+    if (e.ctrlKey && !e.altKey && e.key === "d") {
+      e.preventDefault();
+      const pos = ta.selectionStart;
+      const lines = code.split("\n");
+      let charCount = 0;
+      let lineIdx = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (charCount + lines[i].length >= pos) { lineIdx = i; break; }
+        charCount += lines[i].length + 1;
+      }
+      const newLines = [...lines];
+      newLines.splice(lineIdx + 1, 0, lines[lineIdx]);
+      const newCode = newLines.join("\n");
+      const newPos = charCount + lines[lineIdx].length + 1 + (pos - charCount);
+      applyValue(newCode, newPos);
+      return;
+    }
+
+    // Ctrl+Alt+L — format HTML
+    if (e.ctrlKey && e.altKey && e.key === "l") {
+      e.preventDefault();
+      applyValue(formatHTML(code));
+      return;
+    }
+  };
+
+  const [lightbox, setLightbox] = useState<{ src: string; caption: string } | null>(null);
+  const srcDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:16px;margin:0;line-height:1.5;}*{box-sizing:border-box;}</style></head><body>${code}</body></html>`;
+
+  return (
+    <div className="code-practice">
+      {lightbox && <ImageLightbox src={lightbox.src} caption={lightbox.caption} onClose={() => setLightbox(null)} />}
+      <div className="code-practice-compare">
+        {targetImage && (
+          <div className="code-practice-panel">
+            <div className="code-practice-panel-label">
+              <i className="fa-solid fa-bullseye" aria-hidden="true" />
+              Mục tiêu
+              <span className="code-practice-zoom-hint">
+                <i className="fa-solid fa-magnifying-glass-plus" aria-hidden="true" /> nhấn để phóng to
+              </span>
+            </div>
+            <div className="code-practice-panel-body">
+              <button
+                className="code-practice-img-btn"
+                onClick={() => setLightbox({ src: targetImage, caption: targetAlt ?? "Mục tiêu" })}
+                type="button"
+              >
+                <img src={targetImage} alt={targetAlt ?? "Mục tiêu"} className="code-practice-target-img" />
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="code-practice-panel">
+          <div className="code-practice-panel-label">
+            <i className="fa-solid fa-globe" aria-hidden="true" />
+            Kết quả của bạn
+          </div>
+          <div className="code-practice-panel-body">
+            {code.trim() ? (
+              <iframe
+                className="html-preview-frame code-practice-iframe"
+                srcDoc={srcDoc}
+                title="Practice preview"
+                sandbox="allow-same-origin"
+              />
+            ) : (
+              <p className="code-practice-empty">Viết code bên dưới để xem kết quả</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="code-practice-editor">
+        <div className="code-block-header">
+          <span className="code-block-lang">HTML</span>
+          <div className="code-block-actions">
+            <span className="code-practice-hint">
+              <kbd>Tab</kbd> expand &nbsp;·&nbsp; <kbd>&lt;</kbd> gợi ý &nbsp;·&nbsp; <kbd>Ctrl+D</kbd> nhân đôi &nbsp;·&nbsp; <kbd>Ctrl+Alt+L</kbd> format
+            </span>
+          </div>
+        </div>
+        <div className="code-practice-editor-body">
+          <div className="code-practice-hl-wrap">
+            <pre
+              className="code-block code-practice-hl"
+              aria-hidden="true"
+              dangerouslySetInnerHTML={{
+                __html: code
+                  ? Prism.highlight(code, Prism.languages.markup, "markup") + "\n"
+                  : "",
+              }}
+            />
+            <textarea
+              ref={taRef}
+              className="code-practice-textarea"
+              value={code}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              onScroll={(e) => {
+                const pre = (e.currentTarget.previousSibling as HTMLElement);
+                if (pre) { pre.scrollTop = e.currentTarget.scrollTop; pre.scrollLeft = e.currentTarget.scrollLeft; }
+              }}
+              onBlur={() => setTimeout(() => setSuggestions([]), 150)}
+              placeholder={placeholder ?? "<!-- Nhập code HTML của bạn vào đây -->"}
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
+            />
+          </div>
+          {suggestions.length > 0 && (
+            <ul className="code-suggest-list" style={{ top: dropdownTop, left: dropdownLeft }}>
+              {suggestions.map((tag, i) => (
+                <li key={tag}>
+                  <button
+                    className={`code-suggest-item${i === suggestionIdx ? " active" : ""}`}
+                    onMouseDown={(e) => { e.preventDefault(); applySuggestion(tag); }}
+                    type="button"
+                  >
+                    <span className="code-suggest-tag">&lt;{tag}&gt;</span>
+                    {EMMET_SNIPPETS[tag] && <span className="code-suggest-tab">Tab ↵</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
