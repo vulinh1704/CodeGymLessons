@@ -1257,7 +1257,7 @@ function CodePracticeView({
               >
                 {reviewing
                   ? <><i className="fa-solid fa-spinner fa-spin" /> Đang chấm...</>
-                  : <><i className="fa-solid fa-paper-plane" /> Nộp bài</>}
+                  : <><i className="fa-solid fa-paper-plane" /> AI kiểm tra</>}
               </button>
             )}
           </div>
