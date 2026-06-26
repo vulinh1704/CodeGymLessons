@@ -1,7 +1,23 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { curriculum } from "@/data/curriculum";
 
 export function HomeScreen() {
+  const visibleModules = curriculum.filter((mod) => !mod.hidden);
+  const [openModules, setOpenModules] = useState<Set<string>>(
+    () => new Set(visibleModules.map((m) => m.id))
+  );
+
+  function toggleModule(id: string) {
+    setOpenModules((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
   return (
     <main className="home-app">
       <header className="home-header">
@@ -16,36 +32,41 @@ export function HomeScreen() {
       </header>
 
       <div className="home-body">
-        {curriculum.filter((mod) => !mod.hidden).map((mod) => (
-          <section key={mod.id} className="module-section">
-            <div className="module-heading">
-              <span>{mod.title}</span>
-              <h2>{mod.description}</h2>
-            </div>
-            <div className="lesson-cards">
-              {mod.lessons.map((lesson) => (
-                <Link key={lesson.id} href={`/lesson/${lesson.id}`} className="lesson-card">
-                  <div className="lesson-card-meta">
-                    <span>
-                      <i className="fa-solid fa-layer-group" aria-hidden="true" />
-                      {lesson.slides.length} slides
-                    </span>
-                    <span>
-                      <i className="fa-regular fa-clock" aria-hidden="true" />
-                      {lesson.duration}
-                    </span>
-                  </div>
-                  <h3>{lesson.title}</h3>
-                  <p>{lesson.objective}</p>
-                  <div className="lesson-card-cta">
-                    Bắt đầu học
-                    <i className="fa-solid fa-arrow-right" aria-hidden="true" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ))}
+        {visibleModules.map((mod) => {
+          const isOpen = openModules.has(mod.id);
+          return (
+            <section key={mod.id} className="module-section">
+              <button
+                className="module-dropdown-btn"
+                onClick={() => toggleModule(mod.id)}
+                aria-expanded={isOpen}
+              >
+                <div className="module-dropdown-label">
+                  <span className="module-tag">{mod.title}</span>
+                  <h2>{mod.description}</h2>
+                </div>
+                <i
+                  className={`fa-solid fa-chevron-down module-chevron${isOpen ? " open" : ""}`}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {isOpen && (
+                <ul className="lesson-list">
+                  {mod.lessons.map((lesson, idx) => (
+                    <li key={lesson.id}>
+                      <Link href={`/lesson/${lesson.id}`} className="lesson-list-item">
+                        <span className="lesson-list-index">{String(idx + 1).padStart(2, "0")}</span>
+                        <span className="lesson-list-title">{lesson.title}</span>
+                        <i className="fa-solid fa-arrow-right lesson-list-arrow" aria-hidden="true" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          );
+        })}
       </div>
     </main>
   );

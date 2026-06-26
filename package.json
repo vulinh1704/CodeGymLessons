@@ -9,10 +9,12 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@types/node": "latest",
     "@types/prismjs": "^1.26.6",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "marked": "^18.0.5",
     "next": "latest",
     "prismjs": "^1.30.0",
     "react": "latest",
