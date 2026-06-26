@@ -68,7 +68,7 @@ export type LessonSlide = {
   htmlDemos?: HtmlDemo[];
   flow?: FlowStep[];
   link?: { label: string; url: string };
-  codePractice?: { storageKey: string; targetImage?: string; targetAlt?: string; placeholder?: string };
+  codePractice?: { storageKey: string; targetImage?: string; targetAlt?: string; placeholder?: string; targetCode?: string };
 };
 
 export type Lesson = {

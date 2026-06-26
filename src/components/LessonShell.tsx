@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Prism from "prismjs";
 import "prismjs/components/prism-markup";
+import { marked } from "marked";
 import type { CodeAnnotation, CourseModule, FlowStep, HtmlDemo, KeywordCard, Lesson, LessonSlide, SlideTone } from "@/data/curriculum";
 
 type LessonShellProps = {
@@ -337,6 +338,7 @@ function SlideView({
               targetImage={slide.codePractice.targetImage}
               targetAlt={slide.codePractice.targetAlt}
               placeholder={slide.codePractice.placeholder}
+              targetCode={slide.codePractice.targetCode}
             />
           ) : null}
 
@@ -1005,11 +1007,13 @@ function CodePracticeView({
   targetImage,
   targetAlt,
   placeholder,
+  targetCode,
 }: {
   storageKey: string;
   targetImage?: string;
   targetAlt?: string;
   placeholder?: string;
+  targetCode?: string;
 }) {
   const [code, setCode] = useState("");
   const [showPreview, setShowPreview] = useState(false);
@@ -1017,7 +1021,28 @@ function CodePracticeView({
   const [suggestionIdx, setSuggestionIdx] = useState(0);
   const [dropdownTop, setDropdownTop] = useState(0);
   const [dropdownLeft, setDropdownLeft] = useState(0);
+  const [reviewing, setReviewing] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
   const taRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const submitForReview = async () => {
+    if (!targetCode || !code.trim()) return;
+    setReviewing(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/review-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentCode: code, targetCode }),
+      });
+      const data = await res.json();
+      setFeedback(data.feedback ?? data.error ?? "Không có phản hồi.");
+    } catch {
+      setFeedback("Lỗi kết nối. Vui lòng thử lại.");
+    } finally {
+      setReviewing(false);
+    }
+  };
 
   const updateDropdownPos = () => {
     const ta = taRef.current;
@@ -1197,6 +1222,25 @@ function CodePracticeView({
         </div>
       </div>
 
+      {feedback !== null && (
+        <div className="ai-feedback-backdrop" onClick={() => setFeedback(null)}>
+          <div className="ai-feedback-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="ai-feedback-header">
+              <span className="ai-feedback-title">
+                <i className="fa-solid fa-robot" aria-hidden="true" /> Nhận xét từ AI
+              </span>
+              <button className="ai-feedback-close" onClick={() => setFeedback(null)} type="button">
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div
+              className="ai-feedback-body"
+              dangerouslySetInnerHTML={{ __html: marked.parse(feedback) as string }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="code-practice-editor">
         <div className="code-block-header">
           <span className="code-block-lang">HTML</span>
@@ -1204,6 +1248,18 @@ function CodePracticeView({
             <span className="code-practice-hint">
               <kbd>Tab</kbd> expand &nbsp;·&nbsp; <kbd>&lt;</kbd> gợi ý &nbsp;·&nbsp; <kbd>Ctrl+D</kbd> nhân đôi &nbsp;·&nbsp; <kbd>Ctrl+Alt+L</kbd> format
             </span>
+            {targetCode && (
+              <button
+                className="ai-submit-btn"
+                onClick={submitForReview}
+                disabled={reviewing || !code.trim()}
+                type="button"
+              >
+                {reviewing
+                  ? <><i className="fa-solid fa-spinner fa-spin" /> Đang chấm...</>
+                  : <><i className="fa-solid fa-paper-plane" /> Nộp bài</>}
+              </button>
+            )}
           </div>
         </div>
         <div className="code-practice-editor-body">
