@@ -20,7 +20,7 @@ export const curriculum: CourseModule[] = [
   {
     id: "module-1",
     title: "Module 1",
-    description: "Web cơ bản: HTML",
+    description: "Bootcamp Preparation 2.1",
     lessons: [lesson1, lesson1_2, htmlBasicLesson],
   },
   {
