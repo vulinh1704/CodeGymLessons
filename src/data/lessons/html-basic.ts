@@ -2,7 +2,7 @@ import type { Lesson } from "../types";
 
 export const htmlBasicLesson: Lesson = {
   id: "html-basic",
-  title: "Bootcamp Preparation 2.1",
+  title: "HTML cơ bản",
   duration: "2 giờ",
   objective:
     "Học viên nắm được cấu trúc HTML, sử dụng các thẻ cơ bản, xem kết quả trực tiếp trên trình duyệt và làm việc hiệu quả trong IntelliJ IDEA.",

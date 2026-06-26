@@ -46,6 +46,7 @@ export function LessonShell({ module, lesson, initialSlideIndex = 0 }: LessonShe
     [activeIndex, lesson.slides.length],
   );
 
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (selectedCard) {

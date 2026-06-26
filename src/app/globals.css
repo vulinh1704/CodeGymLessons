@@ -18,6 +18,7 @@
 
 * {
   box-sizing: border-box;
+  cursor: url('/cursor-arrow.svg') 2 1, default !important;
 }
 
 html,
@@ -26,11 +27,51 @@ body {
   min-height: 100%;
 }
 
+/* ── Custom scrollbars ── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c7cfe8;
+  border-radius: 99px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8896cc;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c7cfe8 transparent;
+}
+
 body {
   background: var(--paper);
   color: var(--ink);
+  cursor: url('/cursor-arrow.svg') 2 1, default;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+textarea {
+  cursor: text !important;
 }
 
 button {
